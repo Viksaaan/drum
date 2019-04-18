@@ -6,20 +6,6 @@ unsigned long timer[PADS];
 bool playing[PADS];      
 int highScore[PADS];
 
-/* Settings
- *  
-   (36) Kick     0|1
-   (38) Snare    1|2
-   (71) Tom 1    2|4
-   (69) Tom 2    3|3
-   (67) Tom 3    4|0
-
-   (51) HiHat     5|8
-   (46) Cymbal 1  6|5
-   (79) Cymbal 2  7|7
-   (45) Ride      8|6
-
-*/
 
 
 // настройка дрампадов

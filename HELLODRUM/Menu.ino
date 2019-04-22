@@ -138,15 +138,35 @@ void loop() {
 
   ///////////////////////////// UP ▲ ▼ DOWN  |  BACK ◄ ► NEXT ////////////////////////////////
 
-  if (confirm_edit == true && mode_is_on == true) {
-    if (button_UP == LOW)     UP_DOWN = ++UP_DOWN;      // ▲ UP
-    if (button_DOWN == LOW)   UP_DOWN = --UP_DOWN;      // ▼ DOWN
-    if (button_NEXT == LOW)   NEXT_BACK = ++NEXT_BACK;  // ► NEXT
-    if (button_BACK == LOW)   NEXT_BACK = --NEXT_BACK;  // ◄ BACK
-
+  // ▲ UP
+  if (button_UP == LOW && confirm_edit == true && mode_is_on == true) {
+    UP_DOWN = ++UP_DOWN;     
     confirm_edit = false;
     delay(30);
   }
+    
+  // ▼ DOWN
+  if (button_DOWN == LOW && confirm_edit == true && mode_is_on == true) {
+    UP_DOWN = --UP_DOWN;     
+    confirm_edit = false;
+    delay(30);
+  }
+
+  // ► NEXT
+  if (button_NEXT == LOW && confirm_edit == true && mode_is_on == true) {
+    NEXT_BACK = ++NEXT_BACK;    
+    confirm_edit = false;
+    delay(30);
+  }
+
+  // ► BACK
+  if (button_BACK == LOW && confirm_edit == true && mode_is_on == true) {
+    NEXT_BACK = --NEXT_BACK;    
+    confirm_edit = false;
+    delay(30);
+  }
+    
+  
 
   if (confirm_edit == false && button_UP == HIGH && button_DOWN == HIGH && button_NEXT == HIGH && button_BACK == HIGH && keystroke == HIGH) {
     lcd.clear();

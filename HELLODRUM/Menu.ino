@@ -119,19 +119,13 @@ void loop() {
 
   // edit setting
   if (button_UP == LOW && confirm_edit == TRUE && mode_is_on == FALSE) {
-    note[UP_DOWN] += step[NEXT_BACK]; 
-    
-    //setting[NEXT_BACK] += setting[NEXT_BACK];
-    
+    note[UP_DOWN] += step[NEXT_BACK];     
     confirm_edit = false;
     delay(30);
   }
 
   if (button_DOWN == LOW && confirm_edit == TRUE && mode_is_on == FALSE) {
     note[UP_DOWN] -= step[NEXT_BACK];
-
-    //setting[NEXT_BACK] += setting[NEXT_BACK];
-
     confirm_edit = false;
     delay(30);
   }

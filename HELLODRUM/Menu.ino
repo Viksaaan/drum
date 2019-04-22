@@ -46,15 +46,15 @@ byte mask_time[PADS]  = { 20,   20,   20,   20,   20,   20,   20,   20,   20};  
   byte step[5] = {1,  10,  10,   5,   5}; 
 
   char* instrument[] = {
+    "Tom 3", 
     "Kick",  
     "Snare", 
-    "Tom 1",
-    "Tom 2", 
-    "Tom 3", 
-    "HiHat", 
+    "Tom 2",
+    "Tom 1", 
     "Cymbal 1",
+    "Ride",
     "Cymbal 2",
-    "Ride"
+    "HiHat"
   };
 
   char* setting[] = {
@@ -86,11 +86,11 @@ void loop() {
 
   /////////////////////////////////// CIRCUIT ///////////////////////////////////////
 
-  ushort keystroke 	  = digitalRead(6);
-  ushort button_UP 	  = digitalRead(7);
-  ushort button_DOWN 	= digitalRead(8);
-  ushort button_NEXT 	= digitalRead(9);
-  ushort button_BACK 	= digitalRead(10);
+  short keystroke 	  = digitalRead(6);
+  short button_UP 	  = digitalRead(7);
+  short button_DOWN 	= digitalRead(8);
+  short button_NEXT 	= digitalRead(9);
+  short button_BACK 	= digitalRead(10);
 
 // Menu Buttons
   if (UP_DOWN < 0)       UP_DOWN = 9;
@@ -101,7 +101,7 @@ void loop() {
 
   ////////////////////////////// EDIT BUTTON ////////////////////////////////
 
-  if (keystroke == LOW && confirm_edit == TRUE && mode_is_on == TRUE) {
+  if (keystroke == LOW && confirm_edit == true && mode_is_on == true) {
     lcd.clear();
     lcd.print("EDIT");
     confirm_edit = false;
@@ -109,7 +109,7 @@ void loop() {
     delay(500);
   }
 
-  if (keystroke == LOW && confirm_edit == TRUE && mode_is_on == FALSE) {
+  if (keystroke == LOW && confirm_edit == true && mode_is_on == false) {
     lcd.clear();
     lcd.print("EDIT DONE");
     confirm_edit = false;
@@ -118,13 +118,13 @@ void loop() {
   }
 
   // edit setting
-  if (button_UP == LOW && confirm_edit == TRUE && mode_is_on == FALSE) {
+  if (button_UP == LOW && confirm_edit == true && mode_is_on == false) {
     note[UP_DOWN] += step[NEXT_BACK];     
     confirm_edit = false;
     delay(30);
   }
 
-  if (button_DOWN == LOW && confirm_edit == TRUE && mode_is_on == FALSE) {
+  if (button_DOWN == LOW && confirm_edit == true && mode_is_on == false) {
     note[UP_DOWN] -= step[NEXT_BACK];
     confirm_edit = false;
     delay(30);

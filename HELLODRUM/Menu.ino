@@ -5,6 +5,7 @@ LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  // LCD PIN
 
 boolean confirm_edit  = true;   // применить редактирование
 boolean mode_is_on    = true;   // режим редактирования 
+char* status = "";              // статус работы режима редактирования на lcd
 
 int UP_DOWN = 0;
 int NEXT_BACK = 0;
@@ -56,11 +57,11 @@ boolean playing[PADS] = {false,false,false,false,false,false,false,false,false};
   };
 
   char* setting[] = {
-    "Note",
-    "Min limit",  
-    "Max limit", 
-    "Scan time", 
-    "Mask time"
+    "Note: ",
+    "Min limit: ",  
+    "Max limit: ", 
+    "Scan time: ", 
+    "Mask time: "
   };
 
 
@@ -92,11 +93,11 @@ void loop() {
   short button_NEXT 	= digitalRead(9);
   short button_BACK 	= digitalRead(10);
 
-// Menu Buttons
-  if (UP_DOWN < 0)       UP_DOWN = 9;
-  if (UP_DOWN > 9)       UP_DOWN = 0;
-  if (NEXT_BACK < 0)     NEXT_BACK = 5;
-  if (NEXT_BACK > 5)     NEXT_BACK = 0;
+  // Menu Buttons
+  if (UP_DOWN < 0)       UP_DOWN = 8;
+  if (UP_DOWN > 8)       UP_DOWN = 0;
+  if (NEXT_BACK < 0)     NEXT_BACK = 4;
+  if (NEXT_BACK > 4)     NEXT_BACK = 0;
   
 
   ////////////////////////////// EDIT BUTTON ////////////////////////////////
@@ -106,6 +107,7 @@ void loop() {
     lcd.print("EDIT");
     confirm_edit = false;
     mode_is_on   = false;
+    status = "(Edit)";
     delay(500);
   }
 
@@ -114,6 +116,7 @@ void loop() {
     lcd.print("EDIT DONE");
     confirm_edit = false;
     mode_is_on   = true;
+    status = "";
     delay(500);
   }
 
@@ -165,6 +168,10 @@ void loop() {
   if (confirm_edit == false && button_UP == HIGH && button_DOWN == HIGH && button_NEXT == HIGH && button_BACK == HIGH && keystroke == HIGH) {
     lcd.clear();
     lcd.print(instrument[UP_DOWN]);
+
+    lcd.setCursor(10, 0);
+    lcd.print(status);
+
     lcd.setCursor(0, 1);
     lcd.print(setting[NEXT_BACK]);
     lcd.setCursor(12, 1);

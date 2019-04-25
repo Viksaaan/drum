@@ -123,23 +123,93 @@ void loop() {
   // edit setting
   if (button_UP == LOW && confirm_edit == true && mode_is_on == false) {
     
-    if (NEXT_BACK == 0)     note[UP_DOWN] += step[NEXT_BACK];     
-    if (NEXT_BACK == 1)     min_limit[UP_DOWN] += step[NEXT_BACK];     
-    if (NEXT_BACK == 2)     max_limit[UP_DOWN] += step[NEXT_BACK];     
-    if (NEXT_BACK == 3)     scan_time[UP_DOWN] += step[NEXT_BACK];     
-    if (NEXT_BACK == 4)     mask_time[UP_DOWN] += step[NEXT_BACK];     
+    // + note
+    if (NEXT_BACK == 0) {    
+      note[UP_DOWN] += step[NEXT_BACK]; 
+
+      if (note[UP_DOWN] > 127)  
+        note[UP_DOWN] = 127;
+    }
+    
+    // + min_limit
+    if (NEXT_BACK == 1) {
+      min_limit[UP_DOWN] += step[NEXT_BACK];
+
+      if (min_limit[UP_DOWN] >= max_limit[UP_DOWN])    
+        min_limit[UP_DOWN] = max_limit[UP_DOWN] - 1;
+    }   
+
+    // + max_limit
+    if (NEXT_BACK == 2) {     
+      max_limit[UP_DOWN] += step[NEXT_BACK];  
+
+      if (max_limit[UP_DOWN] > 1027)    
+        max_limit[UP_DOWN] = 1020;
+    }
+
+    // + scan_time
+    if (NEXT_BACK == 3) {    
+      scan_time[UP_DOWN] += step[NEXT_BACK]; 
+
+      // if (scan_time[UP_DOWN] > )
+      //   scan_time[UP_DOWN] = 
+    }
+
+    // + mask_time
+    if (NEXT_BACK == 4) {    
+      mask_time[UP_DOWN] += step[NEXT_BACK];  
+
+      // if (mask_time[UP_DOWN] > )
+      //   mask_time[UP_DOWN] = 
+    }
     
     confirm_edit = false;
     delay(30);
   }
 
+
   if (button_DOWN == LOW && confirm_edit == true && mode_is_on == false) {
     
-    if (NEXT_BACK == 0)     note[UP_DOWN] -= step[NEXT_BACK];     
-    if (NEXT_BACK == 1)     min_limit[UP_DOWN] -= step[NEXT_BACK];     
-    if (NEXT_BACK == 2)     max_limit[UP_DOWN] -= step[NEXT_BACK];     
-    if (NEXT_BACK == 3)     scan_time[UP_DOWN] -= step[NEXT_BACK];     
-    if (NEXT_BACK == 4)     mask_time[UP_DOWN] -= step[NEXT_BACK];   
+    // - note
+    if (NEXT_BACK == 0) {    
+      note[UP_DOWN] -= step[NEXT_BACK]; 
+
+      if (note[UP_DOWN] < 0)    
+        note[UP_DOWN] = 0;
+    }
+
+    // - min_limit
+    if (NEXT_BACK == 1) {    
+      min_limit[UP_DOWN] -= step[NEXT_BACK];
+
+      if (min_limit[UP_DOWN] < 20)   
+        min_limit[UP_DOWN] = 20; 
+    }
+
+    // - max_limit
+    if (NEXT_BACK == 2) {    
+      max_limit[UP_DOWN] -= step[NEXT_BACK]; 
+
+      if (max_limit[UP_DOWN] =< min_limit[UP_DOWN])    
+        max_limit[UP_DOWN] = min_limit[UP_DOWN] + 1;
+    }
+
+    // - scan_time
+    if (NEXT_BACK == 3) {    
+      scan_time[UP_DOWN] -= step[NEXT_BACK]; 
+
+      // if (scan_time[UP_DOWN] < )  
+      //   scan_time[UP_DOWN] =      
+    }
+
+    // - mask_time
+    if (NEXT_BACK == 4) {    
+      mask_time[UP_DOWN] -= step[NEXT_BACK]; 
+
+      // if (mask_time[UP_DOWN] < 10)
+      //   mask_time[UP_DOWN] = 10;
+    }
+
     
     confirm_edit = false;
     delay(30);

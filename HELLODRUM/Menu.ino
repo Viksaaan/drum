@@ -122,13 +122,25 @@ void loop() {
 
   // edit setting
   if (button_UP == LOW && confirm_edit == true && mode_is_on == false) {
-    note[UP_DOWN] += step[NEXT_BACK];     
+    
+    if (NEXT_BACK == 0)     note[UP_DOWN] += step[NEXT_BACK];     
+    if (NEXT_BACK == 1)     min_limit[UP_DOWN] += step[NEXT_BACK];     
+    if (NEXT_BACK == 2)     max_limit[UP_DOWN] += step[NEXT_BACK];     
+    if (NEXT_BACK == 3)     scan_time[UP_DOWN] += step[NEXT_BACK];     
+    if (NEXT_BACK == 4)     mask_time[UP_DOWN] += step[NEXT_BACK];     
+    
     confirm_edit = false;
     delay(30);
   }
 
   if (button_DOWN == LOW && confirm_edit == true && mode_is_on == false) {
-    note[UP_DOWN] -= step[NEXT_BACK];
+    
+    if (NEXT_BACK == 0)     note[UP_DOWN] -= step[NEXT_BACK];     
+    if (NEXT_BACK == 1)     min_limit[UP_DOWN] -= step[NEXT_BACK];     
+    if (NEXT_BACK == 2)     max_limit[UP_DOWN] -= step[NEXT_BACK];     
+    if (NEXT_BACK == 3)     scan_time[UP_DOWN] -= step[NEXT_BACK];     
+    if (NEXT_BACK == 4)     mask_time[UP_DOWN] -= step[NEXT_BACK];   
+    
     confirm_edit = false;
     delay(30);
   }

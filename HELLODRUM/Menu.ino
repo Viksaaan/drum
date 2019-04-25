@@ -1,10 +1,7 @@
-
-
 #include <LiquidCrystal.h>
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  // LCD PIN
-
 #define PADS 9
-bool playing[PADS] = {false,false,false,false,false,false,false,false,false};
+
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  // LCD PIN
 
 boolean confirm_edit  = true;   // применить редактирование
 boolean mode_is_on    = true;   // режим редактирования 
@@ -31,6 +28,7 @@ short min_limit[PADS] = { 100,  100,  100,  100,  100,  100,  300,  300,  300}; 
 short max_limit[PADS] = { 400,  400,  400,  400,  400,  400,  1000, 1000, 1000};   // Верхний предел чувствительности                      
 byte scan_time[PADS]  = { 10,   10,   10,   10,   10,   10,   10,   10,   10};     // Частота опроса датчиков (мс)
 byte mask_time[PADS]  = { 20,   20,   20,   20,   20,   20,   20,   20,   20};     // Длительность игнорирования датчика после получения с него сигнала (мс)
+boolean playing[PADS] = {false,false,false,false,false,false,false,false,false};
 
 
 ////////////////////////////////// EDIT MODE ////////////////////////////////////
@@ -66,10 +64,9 @@ byte mask_time[PADS]  = { 20,   20,   20,   20,   20,   20,   20,   20,   20};  
   };
 
 
-
+////////////////////////////////// SETUP ////////////////////////////////////
 
 void setup() {
-  MIDI.begin(10);
 
   // greeting on the monitor at startup
   lcd.begin(16, 2);
@@ -82,9 +79,12 @@ void setup() {
     pinMode(b, INPUT_PULLUP);
 }
 
+
+  ////////////////////////////////// LOOP ////////////////////////////////////
+
 void loop() {
 
-  /////////////////////////////////// CIRCUIT ///////////////////////////////////////
+  //////////////////////////////// CIRCUIT ////////////////////////////////////
 
   short keystroke 	  = digitalRead(6);
   short button_UP 	  = digitalRead(7);
@@ -169,11 +169,11 @@ void loop() {
     lcd.print(setting[NEXT_BACK]);
     lcd.setCursor(12, 1);
 
-    if (UP_DOWN == 0)   lcd.print(note[UP_DOWN]);
-    if (UP_DOWN == 1)   lcd.print(min_limit[UP_DOWN]);
-    if (UP_DOWN == 2)   lcd.print(max_limit[UP_DOWN]);
-    if (UP_DOWN == 3)   lcd.print(scan_time[UP_DOWN]);
-    if (UP_DOWN == 4)   lcd.print(mask_time[UP_DOWN]);
+    if (NEXT_BACK == 0)   lcd.print(note[UP_DOWN]);
+    if (NEXT_BACK == 1)   lcd.print(min_limit[UP_DOWN]);
+    if (NEXT_BACK == 2)   lcd.print(max_limit[UP_DOWN]);
+    if (NEXT_BACK == 3)   lcd.print(scan_time[UP_DOWN]);
+    if (NEXT_BACK == 4)   lcd.print(mask_time[UP_DOWN]);
 
     confirm_edit = true;
   }

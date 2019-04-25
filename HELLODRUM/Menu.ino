@@ -27,7 +27,7 @@ byte note[PADS]       = { 67,   36,   38,   69,   71,   46,   45,   79,   51};
 
 short min_limit[PADS] = { 100,  100,  100,  100,  100,  100,  300,  300,  300};    // Нижний предел чувствительности                  
 short max_limit[PADS] = { 400,  400,  400,  400,  400,  400,  1000, 1000, 1000};   // Верхний предел чувствительности                      
-byte scan_time[PADS]  = { 10,   10,   10,   10,   10,   10,   10,   10,   10};     // Частота опроса датчиков (мс)
+byte scan_time[PADS]  = { 20,   20,   20,   20,   20,   20,   20,   20,   20};     // Частота опроса датчиков (мс)
 byte mask_time[PADS]  = { 20,   20,   20,   20,   20,   20,   20,   20,   20};     // Длительность игнорирования датчика после получения с него сигнала (мс)
 boolean playing[PADS] = {false,false,false,false,false,false,false,false,false};
 
@@ -136,7 +136,7 @@ void loop() {
       min_limit[UP_DOWN] += step[NEXT_BACK];
 
       if (min_limit[UP_DOWN] >= max_limit[UP_DOWN])    
-        min_limit[UP_DOWN] = max_limit[UP_DOWN] - 1;
+        min_limit[UP_DOWN] += step[NEXT_BACK];
     }   
 
     // + max_limit
@@ -151,16 +151,19 @@ void loop() {
     if (NEXT_BACK == 3) {    
       scan_time[UP_DOWN] += step[NEXT_BACK]; 
 
-      // if (scan_time[UP_DOWN] > )
-      //   scan_time[UP_DOWN] = 
+       if (scan_time[UP_DOWN] > 1000)
+         scan_time[UP_DOWN] = 1000 
     }
 
     // + mask_time
     if (NEXT_BACK == 4) {    
       mask_time[UP_DOWN] += step[NEXT_BACK];  
 
-      // if (mask_time[UP_DOWN] > )
-      //   mask_time[UP_DOWN] = 
+        // if (mask_time[UP_DOWN] >= scan_time[UP_DOWN])
+        //   mask_time[UP_DOWN] -= step[NEXT_BACK]; 
+
+        if (mask_time[UP_DOWN] > 1000)
+          mask_time[UP_DOWN] = 1000
     }
     
     confirm_edit = false;
@@ -191,23 +194,26 @@ void loop() {
       max_limit[UP_DOWN] -= step[NEXT_BACK]; 
 
       if (max_limit[UP_DOWN] <= min_limit[UP_DOWN])    
-        max_limit[UP_DOWN] = min_limit[UP_DOWN] + 1;
+        min_limit[UP_DOWN] += step[NEXT_BACK];
     }
 
     // - scan_time
     if (NEXT_BACK == 3) {    
       scan_time[UP_DOWN] -= step[NEXT_BACK]; 
 
-      // if (scan_time[UP_DOWN] < )  
-      //   scan_time[UP_DOWN] =      
+      //  if (scan_time[UP_DOWN] <= mask_time[UP_DOWN])  
+      //    scan_time[UP_DOWN] =   
+
+      if (scan_time[UP_DOWN] < 0)
+          scan_time[UP_DOWN] = 0;
     }
 
     // - mask_time
     if (NEXT_BACK == 4) {    
       mask_time[UP_DOWN] -= step[NEXT_BACK]; 
 
-      // if (mask_time[UP_DOWN] < 10)
-      //   mask_time[UP_DOWN] = 10;
+       if (mask_time[UP_DOWN] < 0)
+         mask_time[UP_DOWN] = 0;
     }
 
     

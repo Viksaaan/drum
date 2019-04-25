@@ -190,7 +190,7 @@ void loop() {
     if (NEXT_BACK == 2) {    
       max_limit[UP_DOWN] -= step[NEXT_BACK]; 
 
-      if (max_limit[UP_DOWN] =< min_limit[UP_DOWN])    
+      if (max_limit[UP_DOWN] <= min_limit[UP_DOWN])    
         max_limit[UP_DOWN] = min_limit[UP_DOWN] + 1;
     }
 
@@ -245,7 +245,6 @@ void loop() {
     delay(30);
   }
     
-  
 
   if (confirm_edit == false && button_UP == HIGH && button_DOWN == HIGH && button_NEXT == HIGH && button_BACK == HIGH && keystroke == HIGH) {
     lcd.clear();

@@ -136,7 +136,7 @@ void loop() {
       min_limit[UP_DOWN] += step[NEXT_BACK];
 
       if (min_limit[UP_DOWN] >= max_limit[UP_DOWN])    
-        min_limit[UP_DOWN] += step[NEXT_BACK];
+        min_limit[UP_DOWN] -= step[NEXT_BACK];
     }   
 
     // + max_limit

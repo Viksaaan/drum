@@ -1,10 +1,7 @@
-
-
 #include <LiquidCrystal.h>
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  // LCD PIN
-
 #define PADS 9
-bool playing[PADS] = {false,false,false,false,false,false,false,false,false};
+
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  // LCD PIN
 
 boolean confirm_edit  = true;   // применить редактирование
 boolean mode_is_on    = true;   // режим редактирования 
@@ -31,6 +28,7 @@ short min_limit[PADS] = { 100,  100,  100,  100,  100,  100,  300,  300,  300}; 
 short max_limit[PADS] = { 400,  400,  400,  400,  400,  400,  1000, 1000, 1000};   // Верхний предел чувствительности                      
 byte scan_time[PADS]  = { 10,   10,   10,   10,   10,   10,   10,   10,   10};     // Частота опроса датчиков (мс)
 byte mask_time[PADS]  = { 20,   20,   20,   20,   20,   20,   20,   20,   20};     // Длительность игнорирования датчика после получения с него сигнала (мс)
+boolean playing[PADS] = {false,false,false,false,false,false,false,false,false};
 
 
 ////////////////////////////////// EDIT MODE ////////////////////////////////////
@@ -66,10 +64,9 @@ byte mask_time[PADS]  = { 20,   20,   20,   20,   20,   20,   20,   20,   20};  
   };
 
 
-
+////////////////////////////////// SETUP ////////////////////////////////////
 
 void setup() {
-  MIDI.begin(10);
 
   // greeting on the monitor at startup
   lcd.begin(16, 2);
@@ -82,9 +79,12 @@ void setup() {
     pinMode(b, INPUT_PULLUP);
 }
 
+
+  ////////////////////////////////// LOOP ////////////////////////////////////
+
 void loop() {
 
-  /////////////////////////////////// CIRCUIT ///////////////////////////////////////
+  //////////////////////////////// CIRCUIT ////////////////////////////////////
 
   short keystroke 	  = digitalRead(6);
   short button_UP 	  = digitalRead(7);

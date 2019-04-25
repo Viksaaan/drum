@@ -1,10 +1,11 @@
 #include <LiquidCrystal.h>
+#include <EEPROM.h>
 #define PADS 9
 
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  // LCD PIN
 
 boolean confirm_edit  = true;   // применить редактирование
-boolean mode_is_on    = true;   // режим редактирования 
+boolean mode_is_on    = false;  // режим редактирования 
 char* status = "";              // статус работы режима редактирования на lcd
 
 int UP_DOWN = 0;
@@ -64,6 +65,11 @@ boolean playing[PADS] = {false,false,false,false,false,false,false,false,false};
     "Mask time: "
   };
 
+  short addr_note = 0;        // 0-8   - note
+  short addr_min_limit = 10;  // 10-18 - min_limit
+  short addr_max_limit = 20;  // 20-28 - max_limit
+  short addr_scan_time = 30;  // 30-38 - scan_time
+  short addr_mask_time = 40;  // 40-48 - mask_time
 
 ////////////////////////////////// SETUP ////////////////////////////////////
 
@@ -78,6 +84,15 @@ void setup() {
   // Buttons
   for (byte b = 6; b <= 10; b++) 
     pinMode(b, INPUT_PULLUP);
+
+  /////////////////////// EEPROM ///////////////////////
+  for (byte i = 0; i < PADS; i++) {
+    note[i] = EEPROM.read(addr_note++);
+    min_limit[i] = EEPROM.read(addr_min_limit++);
+    max_limit[i] = EEPROM.read(addr_max_limit++);
+    scan_time[i] = EEPROM.read(addr_scan_time++);
+    mask_time[i] = EEPROM.read(addr_mask_time++);
+  }
 }
 
 
@@ -93,35 +108,29 @@ void loop() {
   short button_NEXT 	= digitalRead(9);
   short button_BACK 	= digitalRead(10);
 
-  // Menu Buttons
-  if (UP_DOWN < 0)       UP_DOWN = 8;
-  if (UP_DOWN > 8)       UP_DOWN = 0;
-  if (NEXT_BACK < 0)     NEXT_BACK = 4;
-  if (NEXT_BACK > 4)     NEXT_BACK = 0;
-  
 
   ////////////////////////////// EDIT BUTTON ////////////////////////////////
 
-  if (keystroke == LOW && confirm_edit == true && mode_is_on == true) {
+  if (keystroke == LOW && confirm_edit == true && mode_is_on == false) {
     lcd.clear();
     lcd.print("EDIT");
     confirm_edit = false;
-    mode_is_on   = false;
-    status = "(Edit)";
+    mode_is_on   = true;
+    status = "(edit)";
     delay(500);
   }
 
-  if (keystroke == LOW && confirm_edit == true && mode_is_on == false) {
+  if (keystroke == LOW && confirm_edit == true && mode_is_on == true) {
     lcd.clear();
     lcd.print("EDIT DONE");
     confirm_edit = false;
-    mode_is_on   = true;
+    mode_is_on   = false;
     status = "";
     delay(500);
   }
 
   // edit setting
-  if (button_UP == LOW && confirm_edit == true && mode_is_on == false) {
+  if (button_UP == LOW && confirm_edit == true && mode_is_on == true) {
     
     // + note
     if (NEXT_BACK == 0) {    
@@ -129,6 +138,8 @@ void loop() {
 
       if (note[UP_DOWN] > 127)  
         note[UP_DOWN] = 127;
+
+      EEPROM.write(UP_DOWN, note[UP_DOWN]);             // ****
     }
     
     // + min_limit
@@ -137,22 +148,28 @@ void loop() {
 
       if (min_limit[UP_DOWN] >= max_limit[UP_DOWN])    
         min_limit[UP_DOWN] -= step[NEXT_BACK];
+
+      EEPROM.write(UP_DOWN + 10, min_limit[UP_DOWN]);    // ****
     }   
 
     // + max_limit
     if (NEXT_BACK == 2) {     
       max_limit[UP_DOWN] += step[NEXT_BACK];  
 
-      if (max_limit[UP_DOWN] > 1027)    
+      if (max_limit[UP_DOWN] > 1023)    
         max_limit[UP_DOWN] = 1020;
+        
+      EEPROM.write(UP_DOWN + 20, max_limit[UP_DOWN]);    // ****
     }
 
     // + scan_time
     if (NEXT_BACK == 3) {    
       scan_time[UP_DOWN] += step[NEXT_BACK]; 
 
-       if (scan_time[UP_DOWN] > 1000)
-         scan_time[UP_DOWN] = 1000 
+      if (scan_time[UP_DOWN] > 1000)
+        scan_time[UP_DOWN] = 1000; 
+
+      EEPROM.write(UP_DOWN + 30, scan_time[UP_DOWN]);    // ****
     }
 
     // + mask_time
@@ -163,7 +180,9 @@ void loop() {
         //   mask_time[UP_DOWN] -= step[NEXT_BACK]; 
 
         if (mask_time[UP_DOWN] > 1000)
-          mask_time[UP_DOWN] = 1000
+          mask_time[UP_DOWN] = 1000;
+        
+        EEPROM.write(UP_DOWN + 40, mask_time[UP_DOWN]);  // ****
     }
     
     confirm_edit = false;
@@ -171,7 +190,7 @@ void loop() {
   }
 
 
-  if (button_DOWN == LOW && confirm_edit == true && mode_is_on == false) {
+  if (button_DOWN == LOW && confirm_edit == true && mode_is_on == true) {
     
     // - note
     if (NEXT_BACK == 0) {    
@@ -179,6 +198,8 @@ void loop() {
 
       if (note[UP_DOWN] < 0)    
         note[UP_DOWN] = 0;
+
+      EEPROM.write(UP_DOWN, note[UP_DOWN]);             // ****
     }
 
     // - min_limit
@@ -187,6 +208,8 @@ void loop() {
 
       if (min_limit[UP_DOWN] < 20)   
         min_limit[UP_DOWN] = 20; 
+
+      EEPROM.write(UP_DOWN + 10, min_limit[UP_DOWN]);    // ****
     }
 
     // - max_limit
@@ -195,6 +218,8 @@ void loop() {
 
       if (max_limit[UP_DOWN] <= min_limit[UP_DOWN])    
         min_limit[UP_DOWN] += step[NEXT_BACK];
+
+      EEPROM.write(UP_DOWN + 20, max_limit[UP_DOWN]);    // ****
     }
 
     // - scan_time
@@ -205,15 +230,19 @@ void loop() {
       //    scan_time[UP_DOWN] =   
 
       if (scan_time[UP_DOWN] < 0)
-          scan_time[UP_DOWN] = 0;
+        scan_time[UP_DOWN] = 0;
+
+      EEPROM.write(UP_DOWN + 30, scan_time[UP_DOWN]);    // ****
     }
 
     // - mask_time
     if (NEXT_BACK == 4) {    
       mask_time[UP_DOWN] -= step[NEXT_BACK]; 
 
-       if (mask_time[UP_DOWN] < 0)
-         mask_time[UP_DOWN] = 0;
+      if (mask_time[UP_DOWN] < 0)
+        mask_time[UP_DOWN] = 0;
+
+      EEPROM.write(UP_DOWN + 40, mask_time[UP_DOWN]);  // ****
     }
 
     
@@ -224,29 +253,45 @@ void loop() {
   ///////////////////////////// UP ▲ ▼ DOWN  |  BACK ◄ ► NEXT ////////////////////////////////
 
   // ▲ UP
-  if (button_UP == LOW && confirm_edit == true && mode_is_on == true) {
-    UP_DOWN = ++UP_DOWN;     
+  if (button_UP == LOW && confirm_edit == true && mode_is_on == false) {   
+    UP_DOWN = ++UP_DOWN; 
+    
+    if (UP_DOWN > 8)    
+      UP_DOWN = 0;    
+    
     confirm_edit = false;
     delay(30);
   }
     
   // ▼ DOWN
-  if (button_DOWN == LOW && confirm_edit == true && mode_is_on == true) {
-    UP_DOWN = --UP_DOWN;     
+  if (button_DOWN == LOW && confirm_edit == true && mode_is_on == false) {
+    UP_DOWN = --UP_DOWN; 
+
+    if (UP_DOWN < 0)    
+      UP_DOWN = 8;
+
     confirm_edit = false;
     delay(30);
   }
 
   // ► NEXT
-  if (button_NEXT == LOW && confirm_edit == true && mode_is_on == true) {
-    NEXT_BACK = ++NEXT_BACK;    
+  if (button_NEXT == LOW && confirm_edit == true && mode_is_on == false) {
+    NEXT_BACK = ++NEXT_BACK; 
+
+    if (NEXT_BACK > 4)     
+      NEXT_BACK = 0;
+
     confirm_edit = false;
     delay(30);
   }
 
   // ► BACK
-  if (button_BACK == LOW && confirm_edit == true && mode_is_on == true) {
-    NEXT_BACK = --NEXT_BACK;    
+  if (button_BACK == LOW && confirm_edit == true && mode_is_on == false) {
+    NEXT_BACK = --NEXT_BACK; 
+
+    if (NEXT_BACK < 0)     
+      NEXT_BACK = 4;
+
     confirm_edit = false;
     delay(30);
   }

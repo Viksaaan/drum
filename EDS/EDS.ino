@@ -1,20 +1,28 @@
-#include <LiquidCrystal.h>
+#include <LiquidCrystal_PCF8574.h>
 #include <EEPROM.h>
+#include <Wire.h>
+//#include <LiquidCrystal_I2C.h>
+
 #define PADS 9            // количество дрампадов
 #define BAUD_RATE 115200  // скорость работы Монитора порта
 
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  // LCD PIN
 
-boolean confirm_edit  = true;   // применить редактирование
-boolean mode_is_on    = false;  // режим редактирования 
+//LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  // LCD PIN
+//LiquidCrystal_I2C lcd(0x27,16,2); // Указываем I2C адрес (наиболее распространенное значение), а также параметры экрана (в случае LCD 1602 - 2 строки по 16 символов в каждой 
+LiquidCrystal_PCF8574 lcd(0x27); // Вариант для библиотеки PCF8574 
+
+
+boolean confirm_edit = true;    // применить редактирование
+boolean mode_edit_on = false;   // режим редактирования
+
 String status = "";             // статус работы режима редактирования на lcd
 
-int UP_DOWN = 0;
-int NEXT_BACK = 0;
+int INC_DEC = 0;    // selecting instrument & setting value
+int NEXT_BACK = 0;  // selecting setting
 
 // настройка дрампадов
 /*
-                          -T3
+                          -T4
                           |A0   -Kick
                           |     |A1   -Snare
                           |     |     |A2   -T2
@@ -25,7 +33,7 @@ int NEXT_BACK = 0;
                           |     |     |     |     |     |     |     |A7   -HH
                           |     |     |     |     |     |     |     |     |A8 
 */        
-byte note[PADS]       = { 67,   36,   38,   69,   71,   46,   45,   79,   51};
+byte note[PADS]       = { 65,   36,   38,   69,   71,   46,   45,   79,   51};
 
 short min_limit[PADS] = { 100,  100,  100,  100,  100,  100,  300,  300,  300};    // Нижний предел чувствительности                  
 short max_limit[PADS] = { 400,  400,  400,  400,  400,  400,  1000, 1000, 1000};   // Верхний предел чувствительности                      
@@ -33,8 +41,8 @@ byte scan_time[PADS]  = { 20,   20,   20,   20,   20,   20,   20,   20,   20};  
 byte mask_time[PADS]  = { 20,   20,   20,   20,   20,   20,   20,   20,   20};     // Длительность игнорирования датчика после получения с него сигнала (мс)
 
 boolean playing[PADS]    = {false,false,false,false,false,false,false,false,false};
-int high_score[PADS]     = {0,     0,    0,    0,    0,    0,    0,    0,    0};
-unsigned long timer[PADS]= {0,     0,    0,    0,    0,    0,    0,    0,    0};
+int high_score[PADS]     = {0,    0,    0,    0,    0,    0,    0,    0,    0};
+unsigned long timer[PADS]= {0,    0,    0,    0,    0,    0,    0,    0,    0};
 
 ////////////////////////////////// EDIT MODE ////////////////////////////////////
 
@@ -43,12 +51,11 @@ unsigned long timer[PADS]= {0,     0,    0,    0,    0,    0,    0,    0,    0};
                   |    -Min limit
                   |    |    -Max limit
                   |    |    |    -Scan time
-                  |    |    |    |    -Maskt ime
-                  |    |    |    |    | 
+                  |    |    |    |       
 */
-  byte step[5] = {1,  10,  10,   5,   5}; 
+  byte step[4] = {1,  10,  10,   5}; 
 
-    char* instrument[] = {
+  char* instrument[] = {
     "Tom 3", 
     "Kick",  
     "Snare", 
@@ -64,15 +71,13 @@ unsigned long timer[PADS]= {0,     0,    0,    0,    0,    0,    0,    0,    0};
     "Note: ",
     "Min limit: ",  
     "Max limit: ", 
-    "Scan time: ", 
-    "Mask time: "
+    "Scan time: "
   };
 
-  short addr_note = 0;        // 0-8   - note
-  short addr_min_limit = 10;  // 10-18 - min_limit
-  short addr_max_limit = 20;  // 20-28 - max_limit
-  short addr_scan_time = 30;  // 30-38 - scan_time
-  short addr_mask_time = 40;  // 40-48 - mask_time
+  byte addr_note = 0;         // 0-8   - note       (1 byte)
+  short addr_min_limit = 10;  // 10-27 - min_limit  (2 byte)
+  short addr_max_limit = 30;  // 30-47 - max_limit  (2 byte)
+  short addr_scan_time = 50;  // 50-67 - scan_time  (2 byte)
 
 ////////////////////////////////// SETUP ////////////////////////////////////
 
@@ -80,34 +85,54 @@ void setup() {
     Serial.begin(BAUD_RATE);  
 
     // greeting on the monitor at startup
+    lcd.setBacklight(10);
     lcd.begin(16, 2);
     lcd.print("welcome!");
     lcd.setCursor(0, 1);
     lcd.print("drum kit ready");
     
+
     // Buttons
     for (byte b = 6; b <= 10; b++) 
-        pinMode(b, INPUT_PULLUP);
+      pinMode(b, INPUT_PULLUP);
 
+    ///////////// write data to EEPROM /////////////
+    // for (byte i = 0; i < PADS; i++) 
+    // {
+    //   EEPROM.put(addr_note, note[i]);
+    //   EEPROM.put(addr_min_limit, min_limit[i]);
+    //   EEPROM.put(addr_max_limit, max_limit[i]);
+    //   EEPROM.put(addr_scan_time, scan_time[i]);
 
-    // // for first write in EEPROM
-    // for (byte i = 0; i < PADS; i++) {
-    //   EEPROM.write(i,    note[i]);
-    //   EEPROM.write(i+10, min_limit[i]);
-    //   EEPROM.write(i+20, max_limit[i]);
-    //   EEPROM.write(i+30, scan_time[i]);
-    //   EEPROM.write(i+40, mask_time[i]);
+    //   addr_note += sizeof(addr_note);
+    //   addr_min_limit += sizeof(addr_min_limit);
+    //   addr_max_limit += sizeof(addr_max_limit);
+    //   addr_scan_time += sizeof(addr_scan_time);
     // }
 
-    /////////////////////// EEPROM ///////////////////////
-    for (byte i = 0; i < PADS; i++) {
-      note[i] = EEPROM.read(addr_note++);
-      min_limit[i] = EEPROM.read(addr_min_limit++);
-      max_limit[i] = EEPROM.read(addr_max_limit++);
-      scan_time[i] = EEPROM.read(addr_scan_time++);
-      mask_time[i] = EEPROM.read(addr_mask_time++);
+    // addr_note = 0;        // 0-8   - note       (1 byte)
+    // addr_min_limit = 10;  // 10-27 - min_limit  (2 byte)
+    // addr_max_limit = 30;  // 30-47 - max_limit  (2 byte)
+    // addr_scan_time = 50;  // 50-67 - scan_time  (2 byte)
+
+
+    ///////////// reading data from EEPROM /////////////
+    for (byte i = 0; i < PADS; i++)    
+    {
+      EEPROM.get(addr_note, note[i]);
+      EEPROM.get(addr_min_limit, min_limit[i]);
+      EEPROM.get(addr_max_limit, max_limit[i]);
+      EEPROM.get(addr_scan_time, scan_time[i]);
+
+      addr_note += sizeof(addr_note);
+      addr_min_limit += sizeof(addr_min_limit);
+      addr_max_limit += sizeof(addr_max_limit);
+      addr_scan_time += sizeof(addr_scan_time);
     }
 
+    /////////////// clear memory EEPROM  ///////////////
+    //  for (byte b = 0; b < 90; b++)
+    //    EEPROM.update(b, 0);
 }
 
 
@@ -145,185 +170,159 @@ void loop() {
     }
   }
 
-  //////////////////////////////// CIRCUIT ////////////////////////////////////
-
-  short keystroke 	    = digitalRead(6);
-  short button_UP 	    = digitalRead(7);
-  short button_DOWN     = digitalRead(8);
-  short button_NEXT 	= digitalRead(9);
-  short button_BACK 	= digitalRead(10);
+  short keystroke   = digitalRead(6);
+  short button_INC  = digitalRead(7);
+  short button_DEC  = digitalRead(8);
+  short button_NEXT = digitalRead(9);
+  short button_BACK = digitalRead(10);
 
 
   ////////////////////////////// EDIT BUTTON ////////////////////////////////
 
-  if (keystroke == LOW && confirm_edit == true && mode_is_on == false) {
+  // start editing
+  if (keystroke == LOW && confirm_edit == true && mode_edit_on == false) {
     lcd.clear();
     lcd.print("EDIT");
     confirm_edit = false;
-    mode_is_on   = true;
+    mode_edit_on = true;
     status = "(edit)";
     delay(500);
   }
 
-  if (keystroke == LOW && confirm_edit == true && mode_is_on == true) {
+  // complete editing
+  if (keystroke == LOW && confirm_edit == true && mode_edit_on == true) {
     lcd.clear();
     lcd.print("EDIT DONE");
     confirm_edit = false;
-    mode_is_on   = false;
+    mode_edit_on = false;
     status = "";
     delay(500);
   }
 
   // edit setting
-  if (button_UP == LOW && confirm_edit == true && mode_is_on == true) {
+  if (button_INC == LOW && confirm_edit == true && mode_edit_on == true) {
     
-    // + note
+    // [+] note
     if (NEXT_BACK == 0) {    
-      note[UP_DOWN] += step[NEXT_BACK]; 
+      note[INC_DEC] += step[NEXT_BACK]; 
 
-      if (note[UP_DOWN] > 127)  
-        note[UP_DOWN] = 127;
+      if (note[INC_DEC] > 127)  
+        note[INC_DEC] = 127;
 
-      EEPROM.write(UP_DOWN, note[UP_DOWN]);             // ****
+      EEPROM.update(INC_DEC, note[INC_DEC]);             
     }
     
-    // + min_limit
+    // [+] min_limit
     if (NEXT_BACK == 1) {
-      min_limit[UP_DOWN] += step[NEXT_BACK];
+      min_limit[INC_DEC] += step[NEXT_BACK];
 
-      if (min_limit[UP_DOWN] >= max_limit[UP_DOWN])    
-        min_limit[UP_DOWN] -= step[NEXT_BACK];
+      if (min_limit[INC_DEC] >= max_limit[INC_DEC])    
+        min_limit[INC_DEC] = max_limit[INC_DEC] - step[NEXT_BACK];
 
-      EEPROM.write(UP_DOWN + 10, min_limit[UP_DOWN]);    // ****
+      EEPROM.update(INC_DEC * sizeof(short) + 10, min_limit[INC_DEC]);    
     }   
 
-    // + max_limit
+    // [+] max_limit
     if (NEXT_BACK == 2) {     
-      max_limit[UP_DOWN] += step[NEXT_BACK];  
+      max_limit[INC_DEC] += step[NEXT_BACK];  
 
-      if (max_limit[UP_DOWN] > 1023)    
-        max_limit[UP_DOWN] = 1020;
+      if (max_limit[INC_DEC] > 1023)    
+        max_limit[INC_DEC] = 1020;
         
-      EEPROM.write(UP_DOWN + 20, max_limit[UP_DOWN]);    // ****
+      EEPROM.update(INC_DEC * sizeof(short) + 30, max_limit[INC_DEC]);    
     }
 
-    // + scan_time
+    // [+] scan_time
     if (NEXT_BACK == 3) {    
-      scan_time[UP_DOWN] += step[NEXT_BACK]; 
+      scan_time[INC_DEC] += step[NEXT_BACK]; 
 
-      if (scan_time[UP_DOWN] > 1000)
-        scan_time[UP_DOWN] = 1000; 
+      if (scan_time[INC_DEC] > 1000)
+        scan_time[INC_DEC] = 1000; 
 
-      EEPROM.write(UP_DOWN + 30, scan_time[UP_DOWN]);    // ****
+      EEPROM.update(INC_DEC * sizeof(short) + 50, scan_time[INC_DEC]);    
     }
 
-    // + mask_time
-    if (NEXT_BACK == 4) {    
-      mask_time[UP_DOWN] += step[NEXT_BACK];  
-
-        // if (mask_time[UP_DOWN] >= scan_time[UP_DOWN])
-        //   mask_time[UP_DOWN] -= step[NEXT_BACK]; 
-
-        if (mask_time[UP_DOWN] > 1000)
-          mask_time[UP_DOWN] = 1000;
-        
-        EEPROM.write(UP_DOWN + 40, mask_time[UP_DOWN]);  // ****
-    }
-    
     confirm_edit = false;
     delay(30);
   }
 
 
-  if (button_DOWN == LOW && confirm_edit == true && mode_is_on == true) {
-    
-    // - note
+  if (button_DEC == LOW && confirm_edit == true && mode_edit_on == true) {   
+
+    // [-] note
     if (NEXT_BACK == 0) {    
-      note[UP_DOWN] -= step[NEXT_BACK]; 
+      note[INC_DEC] -= step[NEXT_BACK]; 
 
-      if (note[UP_DOWN] < 0)    
-        note[UP_DOWN] = 0;
+      if (note[INC_DEC] < 0)    
+        note[INC_DEC] = 0;
 
-      EEPROM.write(UP_DOWN, note[UP_DOWN]);             // ****
+      EEPROM.update(INC_DEC, note[INC_DEC]);             
     }
 
-    // - min_limit
+    // [-] min_limit
     if (NEXT_BACK == 1) {    
-      min_limit[UP_DOWN] -= step[NEXT_BACK];
+      min_limit[INC_DEC] -= step[NEXT_BACK];
 
-      if (min_limit[UP_DOWN] < 20)   
-        min_limit[UP_DOWN] = 20; 
+      if (min_limit[INC_DEC] < 20)   
+        min_limit[INC_DEC] = 20; 
 
-      EEPROM.write(UP_DOWN + 10, min_limit[UP_DOWN]);    // ****
+      EEPROM.update(INC_DEC * sizeof(short) + 10, min_limit[INC_DEC]); 
     }
 
-    // - max_limit
+    // [-] max_limit
     if (NEXT_BACK == 2) {    
-      max_limit[UP_DOWN] -= step[NEXT_BACK]; 
+      max_limit[INC_DEC] -= step[NEXT_BACK]; 
 
-      if (max_limit[UP_DOWN] <= min_limit[UP_DOWN])    
-        min_limit[UP_DOWN] += step[NEXT_BACK];
+      if (max_limit[INC_DEC] <= min_limit[INC_DEC])    
+        max_limit[INC_DEC] += step[NEXT_BACK];
 
-      EEPROM.write(UP_DOWN + 20, max_limit[UP_DOWN]);    // ****
+      EEPROM.update(INC_DEC * sizeof(short) + 30, max_limit[INC_DEC]); 
     }
 
-    // - scan_time
+    // [-] scan_time
     if (NEXT_BACK == 3) {    
-      scan_time[UP_DOWN] -= step[NEXT_BACK]; 
+      scan_time[INC_DEC] -= step[NEXT_BACK];  
 
-      //  if (scan_time[UP_DOWN] <= mask_time[UP_DOWN])  
-      //    scan_time[UP_DOWN] =   
+      if (scan_time[INC_DEC] < 0)
+        scan_time[INC_DEC] = 0;
 
-      if (scan_time[UP_DOWN] < 0)
-        scan_time[UP_DOWN] = 0;
-
-      EEPROM.write(UP_DOWN + 30, scan_time[UP_DOWN]);    // ****
+      EEPROM.update(INC_DEC * sizeof(short) + 50, scan_time[INC_DEC]); 
     }
 
-    // - mask_time
-    if (NEXT_BACK == 4) {    
-      mask_time[UP_DOWN] -= step[NEXT_BACK]; 
-
-      if (mask_time[UP_DOWN] < 0)
-        mask_time[UP_DOWN] = 0;
-
-      EEPROM.write(UP_DOWN + 40, mask_time[UP_DOWN]);  // ****
-    }
-
-    
     confirm_edit = false;
     delay(30);
   }
 
-  ///////////////////////////// UP ▲ ▼ DOWN  |  BACK ◄ ► NEXT ////////////////////////////////
 
-  // ▲ UP
-  if (button_UP == LOW && confirm_edit == true && mode_is_on == false) {   
-    UP_DOWN = ++UP_DOWN; 
+  /////////////////////////////  DEC ◄ ► INC |  BACK ◄ ► NEXT ////////////////////////////////
+  
+  // ► INC
+  if (button_INC == LOW && confirm_edit == true && mode_edit_on == false) {   
+    INC_DEC = ++INC_DEC; 
     
-    if (UP_DOWN > 8)    
-      UP_DOWN = 0;    
+    if (INC_DEC > 8)    
+      INC_DEC = 0;    
     
     confirm_edit = false;
     delay(30);
   }
     
-  // ▼ DOWN
-  if (button_DOWN == LOW && confirm_edit == true && mode_is_on == false) {
-    UP_DOWN = --UP_DOWN; 
+  // ◄ DEC
+  if (button_DEC == LOW && confirm_edit == true && mode_edit_on == false) {
+    INC_DEC = --INC_DEC; 
 
-    if (UP_DOWN < 0)    
-      UP_DOWN = 8;
+    if (INC_DEC < 0)    
+      INC_DEC = 8;
 
     confirm_edit = false;
     delay(30);
   }
 
   // ► NEXT
-  if (button_NEXT == LOW && confirm_edit == true && mode_is_on == false) {
+  if (button_NEXT == LOW && confirm_edit == true && mode_edit_on == false) {
     NEXT_BACK = ++NEXT_BACK; 
 
-    if (NEXT_BACK > 4)     
+    if (NEXT_BACK > 3)     
       NEXT_BACK = 0;
 
     confirm_edit = false;
@@ -331,20 +330,20 @@ void loop() {
   }
 
   // ► BACK
-  if (button_BACK == LOW && confirm_edit == true && mode_is_on == false) {
+  if (button_BACK == LOW && confirm_edit == true && mode_edit_on == false) {
     NEXT_BACK = --NEXT_BACK; 
 
     if (NEXT_BACK < 0)     
-      NEXT_BACK = 4;
+      NEXT_BACK = 3;
 
     confirm_edit = false;
     delay(30);
   }
     
 
-  if (confirm_edit == false && button_UP == HIGH && button_DOWN == HIGH && button_NEXT == HIGH && button_BACK == HIGH && keystroke == HIGH) {
+  if (confirm_edit == false && button_INC == HIGH && button_DEC == HIGH && button_NEXT == HIGH && button_BACK == HIGH && keystroke == HIGH) {    
     lcd.clear();
-    lcd.print(instrument[UP_DOWN]);
+    lcd.print(instrument[INC_DEC]);
 
     lcd.setCursor(10, 0);
     lcd.print(status);
@@ -353,11 +352,10 @@ void loop() {
     lcd.print(setting[NEXT_BACK]);
     lcd.setCursor(12, 1);
 
-    if (NEXT_BACK == 0)   lcd.print(note[UP_DOWN]);
-    if (NEXT_BACK == 1)   lcd.print(min_limit[UP_DOWN]);
-    if (NEXT_BACK == 2)   lcd.print(max_limit[UP_DOWN]);
-    if (NEXT_BACK == 3)   lcd.print(scan_time[UP_DOWN]);
-    if (NEXT_BACK == 4)   lcd.print(mask_time[UP_DOWN]);
+    if (NEXT_BACK == 0)   lcd.print(note[INC_DEC]);
+    if (NEXT_BACK == 1)   lcd.print(min_limit[INC_DEC]);
+    if (NEXT_BACK == 2)   lcd.print(max_limit[INC_DEC]);
+    if (NEXT_BACK == 3)   lcd.print(scan_time[INC_DEC]);
 
     confirm_edit = true;
   }
@@ -379,7 +377,7 @@ void noteOn(int cmd, int pitch, int velocity, int ignore) {
   Serial.write(cmd);
   Serial.write(pitch);
   Serial.write(velocity);
-  delay(ignore);
+  delay(ignore);    // ***
 }
 
 // функция прекращения отправки MIDI-сообщения
@@ -387,5 +385,5 @@ void noteOff(int cmd, int pitch, int velocity, int ignore) {
   Serial.write(cmd);
   Serial.write(pitch);
   Serial.write(velocity);
-  delay(ignore);
+  delay(ignore);    // ***
 }

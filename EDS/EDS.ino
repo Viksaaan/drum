@@ -33,30 +33,28 @@ int NEXT_BACK = 0;  // selecting setting
                           |     |     |     |     |     |     |     |A7   -HH
                           |     |     |     |     |     |     |     |     |A8 
 */        
-byte note[PADS]       = { 65,   36,   38,   69,   71,   46,   45,   79,   51};
-
+byte note[PADS]       = { 65,   36,   38,   69,   71,   46,   45,   79,   51};     // Частоты нот
 short min_limit[PADS] = { 100,  100,  100,  100,  100,  100,  300,  300,  300};    // Нижний порог срабатывания                
-short max_limit[PADS] = { 400,  400,  400,  400,  400,  400,  1000, 1000, 1000};   // Верхний порог срабатывания                      
-byte scan_time[PADS]  = { 20,   20,   20,   20,   20,   20,   20,   20,   20};     // Частота опроса (и длительность игнорирования) датчиков (мс) 
-// byte mask_time[PADS]  = { 20,   20,   20,   20,   20,   20,   20,   20,   20};     // Длительность игнорирования датчика после получения с него сигнала (мс)
+short scan_time[PADS] = { 20,   20,   20,   20,   20,   20,   20,   20,   20};     // Частота опроса (и длительность игнорирования) датчиков (мс) 
 short sensitivity[PADS]={ 80,   80,   80,   80,   80,   80,   80,   80,   80};     // Чувствительность
 
 boolean playing[PADS]    = {false,false,false,false,false,false,false,false,false};
 int high_score[PADS]     = {0,    0,    0,    0,    0,    0,    0,    0,    0};
 unsigned long timer[PADS]= {0,    0,    0,    0,    0,    0,    0,    0,    0};
 
-////////////////////////////////// EDIT MODE ////////////////////////////////////
+//short max_limit[PADS] = { 400,  400,  400,  400,  400,  400,  1000, 1000, 1000}; // Верхний порог срабатывания                      
+// byte mask_time[PADS]  = { 20,   20,   20,   20,   20,   20,   20,   20,   20};  // Длительность игнорирования датчика после получения с него сигнала (мс)
 
-/*  change step
-                  -Note
-                  |    -Sensitivity   
-                  |    |    -Min limit
-                  |    |    |    -Max limit
-                  |    |    |    |    -Scan time
-                  |    |    |    |    |       
+/*  шаг изменения настройки
+                  -Note (0..127)
+                  |   -Sensitivity (50..100)   
+                  |   |   -Min limit (100..1000) 
+                  |   |   |    -Scan time (10..1000)
+                  |   |   |    |       
 */
-  byte step[5] = {1,  1,  10,  10,   5}; 
+  byte step[5] = {1,  1,  10,  5}; 
 
+  // набор инструментов для настройки
   char* instrument[] = {
     "Tom 3", 
     "Kick",  
@@ -69,26 +67,25 @@ unsigned long timer[PADS]= {0,    0,    0,    0,    0,    0,    0,    0,    0};
     "HiHat"
   };
 
+  // набор настроек для инструментов
   char* setting[] = {
     "Note: ",
     "Sensitivity:",
     "Min limit: ",  
-    "Max limit: ", 
     "Scan time: "
   };
 
-  byte addr_note = 0;          // 0-8   - note        (1 byte)
-  short addr_min_limit = 10;   // 10-27 - min_limit   (2 byte)
-  short addr_max_limit = 30;   // 30-47 - max_limit   (2 byte)
-  short addr_scan_time = 50;   // 50-67 - scan_time   (2 byte)
-  short addr_sensitivity = 70  // 70-87 - sensitivity (2 byte)
+  // начальные номера ячеек для хранения настроек в EEPROM
+  byte addr_note = 0;           // 0-8   - note         (1 byte)
+  short addr_sensitivity = 70;  // 10-27 - sensitivity  (2 byte)
+  short addr_min_limit   = 10;  // 30-47 - min_limit    (2 byte)
+  short addr_scan_time   = 50;  // 50-67 - scan_time    (2 byte)
 
-////////////////////////////////// SETUP ////////////////////////////////////
 
 void setup() {
     Serial.begin(BAUD_RATE);  
 
-    // greeting on the monitor at startup
+    // текст приветствия на дисплее при запуске
     lcd.setBacklight(10);
     lcd.begin(16, 2);
     lcd.print("welcome!");
@@ -96,62 +93,55 @@ void setup() {
     lcd.print("drum kit ready");
     
 
-    // Buttons
+    // Установка режима работы кнопок
     for (byte b = 6; b <= 10; b++) 
       pinMode(b, INPUT_PULLUP);
 
 
-    ///////////// write data to EEPROM /////////////
+    // Запись данных в EEPROM (производится единожды)
     // for (byte i = 0; i < PADS; i++) 
     // {
     //   EEPROM.put(addr_note, note[i]);
-    //   EEPROM.put(addr_min_limit, min_limit[i]);
-    //   EEPROM.put(addr_max_limit, max_limit[i]);
-    //   EEPROM.put(addr_scan_time, scan_time[i]);
     //   EEPROM.put(addr_sensitivity, sensitivity[i]);
+    //   EEPROM.put(addr_min_limit, min_limit[i]);
+    //   EEPROM.put(addr_scan_time, scan_time[i]);
 
     //   addr_note += sizeof(addr_note);
-    //   addr_min_limit += sizeof(addr_min_limit);
-    //   addr_max_limit += sizeof(addr_max_limit);
-    //   addr_scan_time += sizeof(addr_scan_time);
     //   addr_sensitivity += sizeof(sensitivity);
+    //   addr_min_limit += sizeof(addr_min_limit);
+    //   addr_scan_time += sizeof(addr_scan_time);
     // }
 
     // addr_note = 0;          // 0-8   - note         (1 byte)
-    // addr_min_limit = 10;    // 10-27 - min_limit    (2 byte)
-    // addr_max_limit = 30;    // 30-47 - max_limit    (2 byte)
-    // addr_scan_time = 50;    // 50-67 - scan_time    (2 byte)
-    // addr_sensitivity = 70;  // 70-87 - sensitivity  (2 byte)
+    // addr_sensitivity = 70;  // 10-27 - sensitivity  (2 byte)
+    // addr_min_limit   = 10;  // 30-47 - min_limit    (2 byte)
+    // addr_scan_time   = 50;  // 50-67 - scan_time    (2 byte)
+    
 
-    ///////////// reading data from EEPROM /////////////
+    // Чтение данных из EEPROM 
     for (byte i = 0; i < PADS; i++)    
     {
       EEPROM.get(addr_note, note[i]);
-      EEPROM.get(addr_min_limit, min_limit[i]);
-      EEPROM.get(addr_max_limit, max_limit[i]);
-      EEPROM.get(addr_scan_time, scan_time[i]);
       EEPROM.get(addr_sensitivity, sensitivity[i]);
+      EEPROM.get(addr_min_limit, min_limit[i]);
+      EEPROM.get(addr_scan_time, scan_time[i]);      
 
       addr_note += sizeof(addr_note);
-      addr_min_limit += sizeof(addr_min_limit);
-      addr_max_limit += sizeof(addr_max_limit);
-      addr_scan_time += sizeof(addr_scan_time);
       addr_sensitivity += sizeof(sensitivity);
+      addr_min_limit += sizeof(addr_min_limit);
+      addr_scan_time += sizeof(addr_scan_time);
     }
 
-    /////////////// clear memory EEPROM  ///////////////
-    //  for (byte b = 0; b < 90; b++)
+    // Очистка памяти EEPROM   
+    //  for (byte b = 0; b < 100; b++)
     //    EEPROM.update(b, 0);
 }
 
 
-////////////////////////////////// LOOP ////////////////////////////////////
-
 void loop() {
 
-  // считываем данные с пьезоэлемента
-  for (byte i = 0; i < PADS; i++) {
-    
+  // считываем данные с пьезоэлементов
+  for (byte i = 0; i < PADS; i++) {    
     short volume = analogRead(i);
 
     // если считанное значение превышает Минимальное пороговое значение
@@ -186,9 +176,7 @@ void loop() {
   short button_BACK = digitalRead(10);
 
 
-  ////////////////////////////// EDIT BUTTON ////////////////////////////////
-
-  // start editing
+  // если редактирование начато
   if (keystroke == LOW && confirm_edit == true && mode_edit_on == false) {
     lcd.clear();
     lcd.print("EDIT");
@@ -198,7 +186,7 @@ void loop() {
     delay(500);
   }
 
-  // complete editing
+  // если редактирование завершено
   if (keystroke == LOW && confirm_edit == true && mode_edit_on == true) {
     lcd.clear();
     lcd.print("EDIT DONE");
@@ -208,7 +196,7 @@ void loop() {
     delay(500);
   }
 
-  // edit setting
+  // изменение настроек
   if (button_INC == LOW && confirm_edit == true && mode_edit_on == true) {
     
     // [+] note
@@ -228,31 +216,21 @@ void loop() {
       if (sensitivity[INC_DEC] > 100)  //*******
         sensitivity[INC_DEC] = 100;    //*******
 
-      EEPROM.update(INC_DEC * sizeof(short) + 70, sensitivity[INC_DEC]);             
+      EEPROM.update(INC_DEC * sizeof(short) + 10, sensitivity[INC_DEC]);             
     }
 
     // [+] min_limit
     if (NEXT_BACK == 2) {
       min_limit[INC_DEC] += step[NEXT_BACK];
 
-      if (min_limit[INC_DEC] >= max_limit[INC_DEC])    
-        min_limit[INC_DEC] = max_limit[INC_DEC] - step[NEXT_BACK];
+      if (min_limit[INC_DEC] > 1000)    
+        min_limit[INC_DEC] = 1000;
 
-      EEPROM.update(INC_DEC * sizeof(short) + 10, min_limit[INC_DEC]);    
+      EEPROM.update(INC_DEC * sizeof(short) + 30, min_limit[INC_DEC]);    
     }   
 
-    // [+] max_limit
-    if (NEXT_BACK == 3) {     
-      max_limit[INC_DEC] += step[NEXT_BACK];  
-
-      if (max_limit[INC_DEC] > 1023)    
-        max_limit[INC_DEC] = 1020;
-        
-      EEPROM.update(INC_DEC * sizeof(short) + 30, max_limit[INC_DEC]);    
-    }
-
     // [+] scan_time
-    if (NEXT_BACK == 4) {    
+    if (NEXT_BACK == 3) {    
       scan_time[INC_DEC] += step[NEXT_BACK]; 
 
       if (scan_time[INC_DEC] > 1000)
@@ -285,7 +263,7 @@ void loop() {
       if (sensitivity[INC_DEC] < 50)    
         sensitivity[INC_DEC] = 50;
 
-      EEPROM.update(INC_DEC * sizeof(short) + 70, sensitivity[INC_DEC]);            
+      EEPROM.update(INC_DEC * sizeof(short) + 10, sensitivity[INC_DEC]);            
     }
 
     // [-] min_limit
@@ -295,25 +273,15 @@ void loop() {
       if (min_limit[INC_DEC] < 20)   
         min_limit[INC_DEC] = 20; 
 
-      EEPROM.update(INC_DEC * sizeof(short) + 10, min_limit[INC_DEC]); 
-    }
-
-    // [-] max_limit
-    if (NEXT_BACK == 3) {    
-      max_limit[INC_DEC] -= step[NEXT_BACK]; 
-
-      if (max_limit[INC_DEC] <= min_limit[INC_DEC])    
-        max_limit[INC_DEC] += step[NEXT_BACK];
-
-      EEPROM.update(INC_DEC * sizeof(short) + 30, max_limit[INC_DEC]); 
+      EEPROM.update(INC_DEC * sizeof(short) + 30, min_limit[INC_DEC]); 
     }
 
     // [-] scan_time
-    if (NEXT_BACK == 4) {    
+    if (NEXT_BACK == 3) {    
       scan_time[INC_DEC] -= step[NEXT_BACK];  
 
-      if (scan_time[INC_DEC] < 0)
-        scan_time[INC_DEC] = 0;
+      if (scan_time[INC_DEC] < 10)
+        scan_time[INC_DEC] = 10;
 
       EEPROM.update(INC_DEC * sizeof(short) + 50, scan_time[INC_DEC]); 
     }
@@ -321,7 +289,6 @@ void loop() {
     confirm_edit = false;
     delay(30);
   }
-
 
   /////////////////////////////  DEC ◄ ► INC |  BACK ◄ ► NEXT ////////////////////////////////
   
@@ -351,7 +318,7 @@ void loop() {
   if (button_NEXT == LOW && confirm_edit == true && mode_edit_on == false) {
     NEXT_BACK = ++NEXT_BACK; 
 
-    if (NEXT_BACK > 4)     
+    if (NEXT_BACK > 3)     
       NEXT_BACK = 0;
 
     confirm_edit = false;
@@ -363,7 +330,7 @@ void loop() {
     NEXT_BACK = --NEXT_BACK; 
 
     if (NEXT_BACK < 0)     
-      NEXT_BACK = 4;
+      NEXT_BACK = 3;
 
     confirm_edit = false;
     delay(30);
@@ -384,8 +351,7 @@ void loop() {
     if (NEXT_BACK == 0)   lcd.print(note[INC_DEC]);
     if (NEXT_BACK == 1)   lcd.print(sensitivity[INC_DEC]);
     if (NEXT_BACK == 2)   lcd.print(min_limit[INC_DEC]);
-    if (NEXT_BACK == 3)   lcd.print(max_limit[INC_DEC]);
-    if (NEXT_BACK == 4)   lcd.print(scan_time[INC_DEC]);
+    if (NEXT_BACK == 3)   lcd.print(scan_time[INC_DEC]);
 
     confirm_edit = true;
   }
@@ -393,8 +359,9 @@ void loop() {
 
 
 // функция выравнивания силы звучания
+// (влияет на громкость от силы удара)
 void playNote (byte pad, short volume) {
-  float velocity = ((volume) / float(sensitivity) * 10;
+  float velocity = (volume / (float)sensitivity[pad]) * 10;
   
   if (velocity > 127) 
     velocity = 127;
@@ -403,7 +370,7 @@ void playNote (byte pad, short volume) {
 }
 
 // функция отправки MIDI-сообщения
-void noteOn(int cmd, int pitch, int velocity/*, int ignore*/) {
+void noteOn(int cmd, int pitch, int velocity) /*, int ignore*/ {
   Serial.write(cmd);
   Serial.write(pitch);
   Serial.write(velocity);
@@ -411,7 +378,7 @@ void noteOn(int cmd, int pitch, int velocity/*, int ignore*/) {
 }
 
 // функция прекращения отправки MIDI-сообщения
-void noteOff(int cmd, int pitch, int velocity/*, int ignore*/) {
+void noteOff(int cmd, int pitch, int velocity) /*, int ignore*/ {
   Serial.write(cmd);
   Serial.write(pitch);
   Serial.write(velocity);

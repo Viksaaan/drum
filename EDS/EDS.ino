@@ -1,6 +1,6 @@
-#include <LiquidCrystal_PCF8574.h>
-#include <EEPROM.h>
-#include <Wire.h>
+#include <LiquidCrystal_PCF8574.h>  // Управление жидкокристаллическими экранами
+#include <EEPROM.h>   // Чтение и запись в постоянное хранилище
+#include <Wire.h>     // Обмен данными с устройствами I2C/TWI
 //#include <LiquidCrystal_I2C.h>
 
 #define PADS 9            // количество дрампадов
@@ -12,13 +12,13 @@
 LiquidCrystal_PCF8574 lcd(0x27); // Вариант для библиотеки PCF8574 
 
 
-boolean confirm_edit = true;    // применить редактирование
-boolean mode_edit_on = false;   // режим редактирования
+bool confirm_edit = true;    // применить редактирование
+bool mode_edit_on = false;   // режим редактирования
 
-String status = "";             // статус работы режима редактирования на lcd
+String status = "";          // статус работы режима редактирования на lcd
 
-int INC_DEC = 0;    // selecting instrument & setting value
-int NEXT_BACK = 0;  // selecting setting
+short INC_DEC = 0;    // выбор инструмента & установка значений
+short NEXT_BACK = 0;  // выбор настройки
 
 // настройка дрампадов
 /*
@@ -39,7 +39,7 @@ short scan_time[PADS] = { 20,   20,   20,   20,   20,   20,   20,   20,   20};  
 short sensitivity[PADS]={ 80,   80,   80,   80,   80,   80,   80,   80,   80};     // Чувствительность
 
 boolean playing[PADS]    = {false,false,false,false,false,false,false,false,false};
-int high_score[PADS]     = {0,    0,    0,    0,    0,    0,    0,    0,    0};
+short high_score[PADS]   = {0,    0,    0,    0,    0,    0,    0,    0,    0};
 unsigned long timer[PADS]= {0,    0,    0,    0,    0,    0,    0,    0,    0};
 
 //short max_limit[PADS] = { 400,  400,  400,  400,  400,  400,  1000, 1000, 1000}; // Верхний порог срабатывания                      
@@ -52,7 +52,7 @@ unsigned long timer[PADS]= {0,    0,    0,    0,    0,    0,    0,    0,    0};
                   |   |   |    -Scan time (10..1000)
                   |   |   |    |       
 */
-  byte step[5] = {1,  1,  10,  5}; 
+  byte step[4] = {1,  1,  10,  5}; 
 
   // набор инструментов для настройки
   char* instrument[] = {
@@ -155,8 +155,8 @@ void loop() {
       playNote(i, volume);
     }
     else if (volume < min_limit[i] && playing[i] == true) {
-      noteOn(0x91, note[i], high_score[i]/*, scan_time[i]*/);
-      noteOff(0x91, note[i], 0/*, scan_time[i]*/);
+      noteOn(0x91, note[i], high_score[i]/*, scan_time[i]*/);   // начало активации ноты
+      noteOff(0x91, note[i], 0/*, scan_time[i]*/);              // конец активации ноты
 
       lcd.clear();
       lcd.print(instrument[i]);
@@ -369,7 +369,7 @@ void playNote (byte pad, short volume) {
     high_score[pad] = velocity;
 }
 
-// функция отправки MIDI-сообщения
+// функция отправки MIDI-сообщения 
 void noteOn(int cmd, int pitch, int velocity) /*, int ignore*/ {
   Serial.write(cmd);
   Serial.write(pitch);
